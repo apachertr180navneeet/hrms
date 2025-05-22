@@ -43,12 +43,6 @@
                                 <p>Departments</p>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a href="{{ route('departments.create') }}" class="nav-link {{ request()->routeIs('departments.create') ? 'active' : '' }}">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Add Department</p>
-                            </a>
-                        </li>
                     </ul>
                 </li>
 
@@ -68,12 +62,6 @@
                                 <p>Designations</p>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a href="{{ route('designations.create') }}" class="nav-link {{ request()->routeIs('designations.create') ? 'active' : '' }}">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Add Designation</p>
-                            </a>
-                        </li>
                     </ul>
                 </li>
 
@@ -91,12 +79,6 @@
                             <a href="{{ route('employees.index') }}" class="nav-link {{ request()->routeIs('employees.index') ? 'active' : '' }}">
                                 <i class="far fa-circle nav-icon"></i>
                                 <p>Employees</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{ route('employees.create') }}" class="nav-link {{ request()->routeIs('employees.create') ? 'active' : '' }}">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Add Employee</p>
                             </a>
                         </li>
                     </ul>
