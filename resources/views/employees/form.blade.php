@@ -224,12 +224,12 @@
                                                     name="designation_id"
                                                     required>
                                                 <option value="">Select Designation</option>
-                                                @foreach($designations as $designation)
+                                                {{--  @foreach($designations as $designation)
                                                     <option value="{{ $designation->id }}"
                                                             {{ old('designation_id', $employee->designation_id ?? '') == $designation->id ? 'selected' : '' }}>
                                                         {{ $designation->name }}
                                                     </option>
-                                                @endforeach
+                                                @endforeach  --}}
                                             </select>
                                             @error('designation_id')
                                                 <span class="invalid-feedback">{{ $message }}</span>
@@ -288,7 +288,7 @@
                                                 <option value="intern" {{ old('employment_type', $employee->employment_type ?? '') == 'intern' ? 'selected' : '' }}>Intern</option>
                                             </select>
                                             @error('employment_type')
-                                                <span class="invalid-feedback">{{ $message }}</span>
+                                                <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
                                         </div>
                                     </div>
@@ -323,17 +323,90 @@
         // Department change event to filter designations
         $('#department_id').on('change', function() {
             var departmentId = $(this).val();
+            var designationSelect = $('#designation_id');
+
+            // Clear current options
+            designationSelect.empty();
+            designationSelect.append('<option value="">Select Designation</option>');
+
             if (departmentId) {
-                $.get('/api/departments/' + departmentId + '/designations', function(data) {
-                    var designationSelect = $('#designation_id');
-                    designationSelect.empty();
-                    designationSelect.append('<option value="">Select Designation</option>');
-                    $.each(data, function(key, value) {
-                        designationSelect.append('<option value="' + value.id + '">' + value.name + '</option>');
-                    });
+                // Show loading state
+                designationSelect.prop('disabled', true);
+
+                // Fetch designations for selected department
+                $.ajax({
+                    url: '/departments/' + departmentId + '/designations',
+                    method: 'GET',
+                    success: function(response) {
+                        // Add new options
+                        $.each(response, function(key, value) {
+                            designationSelect.append(
+                                $('<option></option>')
+                                    .val(value.id)
+                                    .text(value.name)
+                            );
+                        });
+
+                        // Enable select
+                        designationSelect.prop('disabled', false);
+                        designationSelect.trigger('change'); // Trigger change for select2
+                    },
+                    error: function(xhr) {
+                        console.error('Error loading designations:', xhr);
+                        var errorMessage = 'Error loading designations. Please try again.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        toastr.error(errorMessage);
+                        designationSelect.prop('disabled', false);
+                    }
                 });
+            } else {
+                designationSelect.prop('disabled', false);
             }
         });
+
+        // Handle form submission
+        $('form').on('submit', function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var submitButton = form.find('button[type="submit"]');
+
+            // Disable submit button
+            submitButton.prop('disabled', true);
+
+            $.ajax({
+                url: form.attr('action'),
+                method: form.attr('method'),
+                data: new FormData(this),
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        if (response.redirect) {
+                            window.location.href = response.redirect;
+                        }
+                    } else {
+                        toastr.error(response.message);
+                        submitButton.prop('disabled', false);
+                    }
+                },
+                error: function(xhr) {
+                    var errorMessage = 'An error occurred while saving the employee.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    toastr.error(errorMessage);
+                    submitButton.prop('disabled', false);
+                }
+            });
+        });
+
+        // Trigger change event if department is pre-selected (for edit mode)
+        if ($('#department_id').val()) {
+            $('#department_id').trigger('change');
+        }
     });
 </script>
 @endpush

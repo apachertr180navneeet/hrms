@@ -18,12 +18,45 @@ class EmployeeController extends Controller
     public function index()
     {
         try {
-            $employees = Employee::with(['department', 'designation', 'reportingManager'])
-                ->latest()
-                ->paginate(10);
+            $query = Employee::with(['department', 'designation', 'reportingManager'])
+                ->latest();
 
-            return view('employees.index', compact('employees'));
+            // Apply search filter
+            if (request()->has('search') && !empty(request('search'))) {
+                $searchValue = request('search');
+                $query->where(function($q) use ($searchValue) {
+                    $q->where('first_name', 'like', "%{$searchValue}%")
+                      ->orWhere('last_name', 'like', "%{$searchValue}%")
+                      ->orWhere('email', 'like', "%{$searchValue}%")
+                      ->orWhere('phone', 'like', "%{$searchValue}%");
+                });
+            }
+
+            // Apply department filter
+            if (request()->has('department') && !empty(request('department'))) {
+                $query->where('department_id', request('department'));
+            }
+
+            // Apply status filter
+            if (request()->has('status') && !empty(request('status'))) {
+                $query->where('status', request('status'));
+            }
+
+            $employees = $query->paginate(10);
+            $departments = Department::where('status', 'active')->get();
+
+            if (request()->ajax()) {
+                return response()->json([
+                    'table_rows' => view('employees.partials.table_rows', compact('employees'))->render(),
+                    'pagination' => $employees->links()->toHtml()
+                ]);
+            }
+
+            return view('employees.index', compact('employees', 'departments'));
         } catch (Exception $e) {
+            if (request()->ajax()) {
+                return response()->json(['error' => 'An error occurred while loading the employees data.'], 500);
+            }
             return redirect()->back()->with('error', 'An error occurred while loading the employees page.');
         }
     }
@@ -40,24 +73,38 @@ class EmployeeController extends Controller
     public function getEmployeesData()
     {
         try {
-            $employees = Employee::with(['department', 'designation'])
-                ->select(['id', 'first_name', 'last_name', 'email', 'phone', 'department_id', 'designation_id', 'status']);
+            $query = Employee::with(['department', 'designation'])
+                ->select(['id', 'first_name', 'last_name', 'email', 'phone', 'department_id', 'designation_id', 'status', 'profile_photo']);
 
-            return Datatables::of($employees)
-                ->addColumn('full_name', function($employee) {
+            // Apply search filter
+            if (request()->has('search') && !empty(request('search')['value'])) {
+                $searchValue = request('search')['value'];
+                $query->where(function($q) use ($searchValue) {
+                    $q->where('first_name', 'like', "%{$searchValue}%")
+                      ->orWhere('last_name', 'like', "%{$searchValue}%")
+                      ->orWhere('email', 'like', "%{$searchValue}%")
+                      ->orWhere('phone', 'like', "%{$searchValue}%");
+                });
+            }
+
+            // Apply department filter
+            if (request()->has('department') && !empty(request('department'))) {
+                $query->where('department_id', request('department'));
+            }
+
+            // Apply status filter
+            if (request()->has('status') && !empty(request('status'))) {
+                $query->where('status', request('status'));
+            }
+
+            return DataTables::of($query)
+                ->addColumn('name', function($employee) {
                     return $employee->first_name . ' ' . $employee->last_name;
                 })
                 ->addColumn('actions', function($employee) {
-                    $editUrl = route('employees.edit', $employee->id);
-                    $deleteButton = '<button type="button" class="btn btn-sm btn-danger delete-employee" data-employee-id="' . $employee->id . '" data-employee-name="' . $employee->first_name . ' ' . $employee->last_name . '">Delete</button>';
-                    $editButton = '<a href="' . $editUrl . '" class="btn btn-sm btn-info">Edit</a>';
-                    return $editButton . ' ' . $deleteButton;
+                    return ''; // This will be rendered by DataTables
                 })
-                ->addColumn('status_badge', function($employee) {
-                    $statusClass = $employee->status === 'active' ? 'success' : 'danger';
-                    return '<span class="badge bg-' . $statusClass . ' status-badge" style="cursor: pointer;" data-employee-id="' . $employee->id . '" data-status="' . $employee->status . '">' . ucfirst($employee->status) . '</span>';
-                })
-                ->rawColumns(['actions', 'status_badge'])
+                ->rawColumns(['actions'])
                 ->make(true);
         } catch (Exception $e) {
             return response()->json(['error' => 'An error occurred while fetching employees data.'], 500);
@@ -67,18 +114,16 @@ class EmployeeController extends Controller
     public function getTrashedEmployeesData()
     {
         try {
-            $trashedEmployees = Employee::with(['department', 'designation'])
+            $query = Employee::with(['department', 'designation'])
                 ->onlyTrashed()
-                ->select(['id', 'first_name', 'last_name', 'email', 'phone', 'department_id', 'designation_id', 'deleted_at']);
+                ->select(['id', 'first_name', 'last_name', 'email', 'phone', 'department_id', 'designation_id', 'deleted_at', 'profile_photo']);
 
-            return Datatables::of($trashedEmployees)
-                ->addColumn('full_name', function($employee) {
+            return DataTables::of($query)
+                ->addColumn('name', function($employee) {
                     return $employee->first_name . ' ' . $employee->last_name;
                 })
                 ->addColumn('actions', function($employee) {
-                    $restoreButton = '<button type="button" class="btn btn-sm btn-success restore-employee" data-employee-id="' . $employee->id . '" data-employee-name="' . $employee->first_name . ' ' . $employee->last_name . '">Restore</button>';
-                    $forceDeleteButton = '<button type="button" class="btn btn-sm btn-danger force-delete-employee" data-employee-id="' . $employee->id . '" data-employee-name="' . $employee->first_name . ' ' . $employee->last_name . '">Delete Permanently</button>';
-                    return $restoreButton . ' ' . $forceDeleteButton;
+                    return ''; // This will be rendered by DataTables
                 })
                 ->rawColumns(['actions'])
                 ->make(true);
@@ -100,55 +145,99 @@ class EmployeeController extends Controller
         }
     }
 
+    private function generateEmployeeId($departmentId)
+    {
+        // Get department code
+        $department = Department::find($departmentId);
+        $deptCode = strtoupper(substr($department->code, 0, 3));
+
+        // Get current year
+        $year = date('Y');
+
+        // Get the last employee number for this department and year
+        $lastEmployee = Employee::where('employee_id', 'like', $deptCode . '-' . $year . '-%')
+            ->orderBy('employee_id', 'desc')
+            ->first();
+
+        if ($lastEmployee) {
+            // Extract the number part and increment
+            $lastNumber = (int)substr($lastEmployee->employee_id, -4);
+            $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+        } else {
+            // Start with 0001 if no previous employee
+            $newNumber = '0001';
+        }
+
+        // Format: DEPTCODE-YEAR-XXXX (e.g., IT-2024-0001)
+        $newEmployeeId = $deptCode . '-' . $year . '-' . $newNumber;
+
+        // Double check if the ID is unique
+        while (Employee::where('employee_id', $newEmployeeId)->exists()) {
+            $newNumber = str_pad((int)$newNumber + 1, 4, '0', STR_PAD_LEFT);
+            $newEmployeeId = $deptCode . '-' . $year . '-' . $newNumber;
+        }
+
+        return $newEmployeeId;
+    }
+
     public function store(Request $request)
     {
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:employees',
+            'phone' => 'required|string|max:20',
+            'date_of_birth' => 'required|date',
+            'gender' => 'required|in:male,female,other',
+            'marital_status' => 'required|in:single,married,divorced,widowed',
+            'address' => 'required|string',
+            'city' => 'required|string|max:255',
+            'state' => 'required|string|max:255',
+            'country' => 'required|string|max:255',
+            'postal_code' => 'required|string|max:20',
+            'department_id' => 'required|exists:departments,id',
+            'designation_id' => 'required|exists:designations,id',
+            'reporting_manager_id' => 'nullable|exists:employees,id',
+            'joining_date' => 'required|date',
+            'employment_type' => 'required|in:full_time,part_time,contract,intern',
+            'profile_photo' => 'nullable|image|max:2048',
+        ]);
+
+        DB::beginTransaction();
         try {
-            $validated = $request->validate([
-                'first_name' => 'required|string|max:255',
-                'last_name' => 'required|string|max:255',
-                'email' => 'required|email|unique:employees',
-                'phone' => 'required|string|max:20',
-                'date_of_birth' => 'required|date',
-                'gender' => 'required|in:male,female,other',
-                'marital_status' => 'required|in:single,married,divorced,widowed',
-                'address' => 'required|string',
-                'city' => 'required|string|max:255',
-                'state' => 'required|string|max:255',
-                'country' => 'required|string|max:255',
-                'postal_code' => 'required|string|max:20',
-                'department_id' => 'required|exists:departments,id',
-                'designation_id' => 'required|exists:designations,id',
-                'reporting_manager_id' => 'nullable|exists:employees,id',
-                'joining_date' => 'required|date',
-                'employment_type' => 'required|in:full-time,part-time,contract,intern',
-                'profile_photo' => 'nullable|image|max:2048',
-                'status' => 'required|in:active,inactive'
+            // Create user account
+            $user = \App\Models\User::create([
+                'name' => $validated['first_name'] . ' ' . $validated['last_name'],
+                'email' => $validated['email'],
+                'password' => bcrypt('password'), // Default password
+                'role' => 'employee'
             ]);
 
-            DB::beginTransaction();
-            try {
-                if ($request->hasFile('profile_photo')) {
-                    $path = $request->file('profile_photo')->store('employee-photos', 'public');
-                    $validated['profile_photo'] = $path;
-                }
+            // Add user_id to validated data
+            $validated['user_id'] = $user->id;
 
-                $employee = Employee::create($validated);
+            // Generate unique employee ID
+            $validated['employee_id'] = $this->generateEmployeeId($validated['department_id']);
 
-                DB::commit();
-                return redirect()->route('employees.index')
-                    ->with('success', 'Employee created successfully.');
-            } catch (\Exception $e) {
-                DB::rollBack();
-                return back()->with('error', 'Error creating employee: ' . $e->getMessage());
+            if ($request->hasFile('profile_photo')) {
+                $path = $request->file('profile_photo')->store('employee-photos', 'public');
+                $validated['profile_photo'] = $path;
             }
-        } catch (QueryException $e) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Database error occurred while creating the employee.');
-        } catch (Exception $e) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'An error occurred while creating the employee.');
+
+            $employee = Employee::create($validated);
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Employee created successfully with ID: ' . $validated['employee_id'],
+                'redirect' => route('employees.index')
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error creating employee: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -272,6 +361,17 @@ class EmployeeController extends Controller
     {
         try {
             $employee = Employee::withTrashed()->findOrFail($id);
+
+            // Delete profile photo if exists
+            if ($employee->profile_photo) {
+                Storage::disk('public')->delete($employee->profile_photo);
+            }
+
+            // Delete associated user account
+            if ($employee->user) {
+                $employee->user->delete();
+            }
+
             $employee->forceDelete();
 
             return response()->json([
@@ -293,15 +393,25 @@ class EmployeeController extends Controller
                 'status' => 'required|in:active,inactive'
             ]);
 
-            $employee->update([
-                'status' => $request->status
-            ]);
+            DB::beginTransaction();
+            try {
+                $employee->update([
+                    'status' => $request->status
+                ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Employee status updated successfully',
-                'status' => $employee->status
-            ]);
+                DB::commit();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Employee status updated successfully',
+                    'status' => $employee->status
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error updating employee status: ' . $e->getMessage()
+                ], 500);
+            }
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,

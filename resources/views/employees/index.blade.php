@@ -8,6 +8,9 @@
                 <div class="card-header">
                     <h3 class="card-title">Employees</h3>
                     <div class="card-tools">
+                        <a href="{{ route('employees.trash') }}" class="btn btn-warning btn-sm mr-2">
+                            <i class="fas fa-trash"></i> Trash
+                        </a>
                         <a href="{{ route('employees.create') }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-plus"></i> Add Employee
                         </a>
@@ -33,6 +36,11 @@
                                 <option value="inactive">Inactive</option>
                             </select>
                         </div>
+                        <div class="col-md-3">
+                            <button type="button" class="btn btn-secondary" id="reset-filters">
+                                <i class="fas fa-undo"></i> Reset Filters
+                            </button>
+                        </div>
                     </div>
 
                     <div class="table-responsive">
@@ -49,71 +57,13 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @forelse($employees as $employee)
-                                    <tr>
-                                        <td>{{ $employee->id }}</td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                @if($employee->profile_photo)
-                                                    <img src="{{ Storage::url($employee->profile_photo) }}"
-                                                         class="img-circle mr-2"
-                                                         style="width: 32px; height: 32px; object-fit: cover;">
-                                                @else
-                                                    <div class="img-circle mr-2 bg-secondary text-white d-flex align-items-center justify-content-center"
-                                                         style="width: 32px; height: 32px;">
-                                                        {{ substr($employee->first_name, 0, 1) }}
-                                                    </div>
-                                                @endif
-                                                {{ $employee->first_name }} {{ $employee->last_name }}
-                                            </div>
-                                        </td>
-                                        <td>{{ $employee->department->name }}</td>
-                                        <td>{{ $employee->designation->name }}</td>
-                                        <td>{{ $employee->email }}</td>
-                                        <td>{{ $employee->phone }}</td>
-                                        <td>
-                                            <span class="badge badge-{{ $employee->status === 'active' ? 'success' : 'danger' }}">
-                                                {{ ucfirst($employee->status) }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group">
-                                                <a href="{{ route('employees.show', $employee) }}"
-                                                   class="btn btn-info btn-sm"
-                                                   title="View">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{{ route('employees.edit', $employee) }}"
-                                                   class="btn btn-primary btn-sm"
-                                                   title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <form action="{{ route('employees.destroy', $employee) }}"
-                                                      method="POST"
-                                                      class="d-inline"
-                                                      onsubmit="return confirm('Are you sure you want to delete this employee?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                            class="btn btn-danger btn-sm"
-                                                            title="Delete">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="8" class="text-center">No employees found.</td>
-                                    </tr>
-                                @endforelse
+                            <tbody id="employees-table-body">
+                                @include('employees.partials.table_rows')
                             </tbody>
                         </table>
                     </div>
 
-                    <div class="mt-3">
+                    <div class="mt-3" id="pagination-links">
                         {{ $employees->links() }}
                     </div>
                 </div>
@@ -131,14 +81,124 @@ $(document).ready(function() {
         theme: 'bootstrap4'
     });
 
-    // Handle search and filter
-    function applyFilters() {
+    // Function to load table data
+    function loadTableData(page = 1) {
         const search = $('#search').val();
         const department = $('#department').val();
         const status = $('#status').val();
 
-        window.location.href = `{{ route('employees.index') }}?search=${search}&department=${department}&status=${status}`;
+        $.ajax({
+            url: `{{ route('employees.index') }}?page=${page}`,
+            method: 'GET',
+            data: {
+                search: search,
+                department: department,
+                status: status
+            },
+            success: function(response) {
+                $('#employees-table-body').html(response.table_rows);
+                $('#pagination-links').html(response.pagination);
+                initializeEventHandlers();
+            },
+            error: function(xhr) {
+                toastr.error('Error loading employees data');
+            }
+        });
     }
+
+    // Initialize event handlers for dynamic content
+    function initializeEventHandlers() {
+        // Status change handler
+        $('.status-badge').on('click', function() {
+            const badge = $(this);
+            const employeeId = badge.data('employee-id');
+            const currentStatus = badge.data('status');
+            const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+
+            $.ajax({
+                url: `/employees/${employeeId}/status`,
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                data: {
+                    status: newStatus
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update badge appearance
+                        badge.removeClass('badge-success badge-danger')
+                            .addClass(newStatus === 'active' ? 'badge-success' : 'badge-danger')
+                            .text(newStatus.charAt(0).toUpperCase() + newStatus.slice(1))
+                            .data('status', newStatus);
+
+                        // Reload table data to ensure consistency
+                        loadTableData();
+
+                        toastr.success('Status updated successfully');
+                    } else {
+                        toastr.error(response.message || 'Failed to update status');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Status update error:', xhr.responseJSON);
+                    toastr.error('An error occurred while updating status');
+                }
+            });
+        });
+
+        // Delete handler
+        $('.delete-employee').on('click', function() {
+            const button = $(this);
+            const employeeId = button.data('employee-id');
+            const employeeName = button.data('employee-name');
+
+            Swal.fire({
+                title: `Are you sure?`,
+                text: `Do you want to delete ${employeeName}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/employees/${employeeId}`,
+                        method: 'DELETE',
+                        data: {
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                loadTableData();
+                                Swal.fire('Deleted!', 'Employee moved to trash successfully.', 'success');
+                            } else {
+                                Swal.fire('Error', response.message || 'Failed to delete employee', 'error');
+                            }
+                        },
+                        error: function(xhr) {
+                            Swal.fire('Error', 'An error occurred while deleting the employee', 'error');
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    // Handle search and filter
+    function applyFilters() {
+        loadTableData();
+    }
+
+    // Reset filters
+    $('#reset-filters').on('click', function() {
+        $('#search').val('');
+        $('#department').val('').trigger('change');
+        $('#status').val('').trigger('change');
+        loadTableData();
+    });
 
     // Debounce search input
     let searchTimeout;
@@ -149,6 +209,16 @@ $(document).ready(function() {
 
     // Handle filter changes
     $('#department, #status').on('change', applyFilters);
+
+    // Handle pagination clicks
+    $(document).on('click', '.pagination a', function(e) {
+        e.preventDefault();
+        const page = $(this).attr('href').split('page=')[1];
+        loadTableData(page);
+    });
+
+    // Initialize event handlers on page load
+    initializeEventHandlers();
 });
 </script>
 @endpush

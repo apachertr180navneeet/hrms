@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
 use Exception;
 use Illuminate\Database\QueryException;
+use App\Models\Designation;
 
 class DepartmentController extends Controller
 {
@@ -213,6 +214,22 @@ class DepartmentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while updating the department status'
+            ], 500);
+        }
+    }
+
+    public function getDesignations(Department $department)
+    {
+        try {
+            $designations = Designation::where('department_id', $department->id)
+                ->where('status', 'active')
+                ->get(['id', 'name']);
+
+            return response()->json($designations);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => 'Failed to load designations. Please try again.'
             ], 500);
         }
     }

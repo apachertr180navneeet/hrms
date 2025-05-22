@@ -23,13 +23,13 @@ Route::middleware('auth')->group(function () {
     })->name('dashboard');
 
     // Employee Management Routes
-    Route::resource('employees', EmployeeController::class)->except(['show']);
-    Route::patch('/employees/{employee}/status', [EmployeeController::class, 'updateStatus'])->name('employees.status');
-    Route::post('/employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
-    Route::delete('/employees/{id}/force-delete', [EmployeeController::class, 'forceDelete'])->name('employees.force-delete');
+    Route::get('employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
+    Route::get('employees/trashed-data', [EmployeeController::class, 'getTrashedEmployeesData'])->name('employees.trashed-data');
+    Route::post('employees/{id}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+    Route::delete('employees/{id}/force-delete', [EmployeeController::class, 'forceDelete'])->name('employees.force-delete');
+    Route::post('employees/{employee}/status', [EmployeeController::class, 'updateStatus'])->name('employees.update-status');
     Route::get('/employees/data', [EmployeeController::class, 'getEmployeesData'])->name('employees.data');
-    Route::get('/employees/trashed-data', [EmployeeController::class, 'getTrashedEmployeesData'])->name('employees.trashed-data');
-    Route::get('/employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
+    Route::resource('employees', EmployeeController::class);
 
     // Department Management Routes
     Route::resource('departments', DepartmentController::class)->except(['show']);
@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/departments/{id}/force-delete', [DepartmentController::class, 'forceDelete'])->name('departments.force-delete');
 
     Route::get('/departments/data', [DepartmentController::class, 'getDepartmentsData'])->name('departments.data');
+    Route::get('/departments/{department}/designations', [DepartmentController::class, 'getDesignations'])->name('departments.designations');
     Route::get('/departments/trashed-data', [DepartmentController::class, 'getTrashedDepartmentsData'])->name('departments.trashed-data');
     Route::get('/departments/trash', [DepartmentController::class, 'trash'])->name('departments.trash');
 
@@ -49,11 +50,4 @@ Route::middleware('auth')->group(function () {
     Route::get('/designations/data', [DesignationController::class, 'getDesignationsData'])->name('designations.data');
     Route::get('/designations/trashed-data', [DesignationController::class, 'getTrashedDesignationsData'])->name('designations.trashed-data');
     Route::get('/designations/trash', [DesignationController::class, 'trash'])->name('designations.trash');
-
-    // API Routes for dynamic data
-    Route::get('/api/departments/{department}/designations', function ($department) {
-        return \App\Models\Designation::where('department_id', $department)
-            ->where('status', 'active')
-            ->get();
-    });
 });
