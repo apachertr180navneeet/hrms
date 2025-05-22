@@ -26,7 +26,14 @@ Route::middleware('auth')->group(function () {
     Route::resource('employees', EmployeeController::class);
 
     // Department Management Routes
-    Route::resource('departments', DepartmentController::class);
+    Route::resource('departments', DepartmentController::class)->except(['show']);
+    Route::patch('/departments/{department}/status', [DepartmentController::class, 'updateStatus'])->name('departments.status');
+    Route::post('/departments/{id}/restore', [DepartmentController::class, 'restore'])->name('departments.restore');
+    Route::delete('/departments/{id}/force-delete', [DepartmentController::class, 'forceDelete'])->name('departments.force-delete');
+
+    Route::get('/departments/data', [DepartmentController::class, 'getDepartmentsData'])->name('departments.data');
+    Route::get('/departments/trashed-data', [DepartmentController::class, 'getTrashedDepartmentsData'])->name('departments.trashed-data');
+    Route::get('/departments/trash', [DepartmentController::class, 'trash'])->name('departments.trash');
 
     // Designation Management Routes
     Route::resource('designations', DesignationController::class);
