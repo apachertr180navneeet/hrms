@@ -292,24 +292,6 @@
                                             @enderror
                                         </div>
                                     </div>
-
-                                    @if(isset($employee))
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label for="status">Status</label>
-                                            <select class="form-control @error('status') is-invalid @enderror"
-                                                    id="status"
-                                                    name="status"
-                                                    required>
-                                                <option value="active" {{ old('status', $employee->status) == 'active' ? 'selected' : '' }}>Active</option>
-                                                <option value="inactive" {{ old('status', $employee->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                                            </select>
-                                            @error('status')
-                                                <span class="invalid-feedback">{{ $message }}</span>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                    @endif
                                 </div>
                             </div>
                         </div>

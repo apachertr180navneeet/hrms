@@ -23,21 +23,8 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="status" class="form-label">Status</label>
-                            <select class="form-select @error('status') is-invalid @enderror"
-                                id="status" name="status" required>
-                                <option value="">Select Status</option>
-                                <option value="active" {{ old('status') == 'active' ? 'selected' : '' }}>Active</option>
-                                <option value="inactive" {{ old('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                            </select>
-                            @error('status')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('departments.index') }}" class="btn btn-secondary">Back</a>
                             <button type="submit" class="btn btn-primary">Create Department</button>
+                            <a href="{{ route('departments.index') }}" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>

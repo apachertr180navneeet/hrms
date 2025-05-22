@@ -21,8 +21,7 @@ class DepartmentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'status' => 'required|in:active,inactive'
+            'name' => 'required|string|max:255'
         ]);
 
         Department::create($validated);
@@ -39,8 +38,7 @@ class DepartmentController extends Controller
     public function update(Request $request, Department $department)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'status' => 'required|in:active,inactive'
+            'name' => 'required|string|max:255'
         ]);
 
         $department->update($validated);

@@ -24,8 +24,7 @@ class DesignationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'department_id' => 'required|exists:departments,id',
-            'status' => 'required|in:active,inactive'
+            'department_id' => 'required|exists:departments,id'
         ]);
 
         Designation::create($validated);
@@ -44,8 +43,7 @@ class DesignationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'department_id' => 'required|exists:departments,id',
-            'status' => 'required|in:active,inactive'
+            'department_id' => 'required|exists:departments,id'
         ]);
 
         $designation->update($validated);

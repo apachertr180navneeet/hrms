@@ -50,7 +50,6 @@ class EmployeeController extends Controller
             'reporting_manager_id' => 'nullable|exists:employees,id',
             'joining_date' => 'required|date',
             'employment_type' => 'required|in:full-time,part-time,contract,intern',
-            'status' => 'required|in:active,inactive',
             'profile_photo' => 'nullable|image|max:2048',
         ]);
 
@@ -109,7 +108,6 @@ class EmployeeController extends Controller
             'reporting_manager_id' => 'nullable|exists:employees,id',
             'joining_date' => 'required|date',
             'employment_type' => 'required|in:full-time,part-time,contract,intern',
-            'status' => 'required|in:active,inactive',
             'profile_photo' => 'nullable|image|max:2048',
         ]);
 
