@@ -1,7 +1,7 @@
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
     <a href="{{ route('dashboard') }}" class="brand-link">
-        <img src="{{ asset('img/logo.png') }}" alt="{{ config('app.name', 'HRMS') }}" class="brand-image img-circle elevation-3" style="opacity: .8">
+        {{--  <img src="{{ asset('img/logo.png') }}" alt="{{ config('app.name', 'HRMS') }}" class="brand-image img-circle elevation-3" style="opacity: .8">  --}}
         <span class="brand-text font-weight-light">{{ config('app.name', 'HRMS') }}</span>
     </a>
 
@@ -10,7 +10,7 @@
         <!-- Sidebar user panel -->
         <div class="user-panel mt-3 pb-3 mb-3 d-flex">
             <div class="image">
-                <img src="{{ asset('img/user.png') }}" class="img-circle elevation-2" alt="User Image">
+                {{--  <img src="{{ asset('img/user.png') }}" class="img-circle elevation-2" alt="User Image">  --}}
             </div>
             <div class="info">
                 <a href="#" class="d-block">{{ Auth::user()->name }}</a>
@@ -27,37 +27,12 @@
                     </a>
                 </li>
 
-                <!-- Employee Management -->
-                <li class="nav-item {{ request()->routeIs('employees.*') ? 'menu-open' : '' }}">
-                    <a href="#" class="nav-link {{ request()->routeIs('employees.*') ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-users"></i>
-                        <p>
-                            Employee Management
-                            <i class="right fas fa-angle-left"></i>
-                        </p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <li class="nav-item">
-                            <a href="{{ route('employees.index') }}" class="nav-link {{ request()->routeIs('employees.index') ? 'active' : '' }}">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Employees</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{ route('employees.create') }}" class="nav-link {{ request()->routeIs('employees.create') ? 'active' : '' }}">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Add Employee</p>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
                 <!-- Department Management -->
                 <li class="nav-item {{ request()->routeIs('departments.*') ? 'menu-open' : '' }}">
                     <a href="#" class="nav-link {{ request()->routeIs('departments.*') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-building"></i>
                         <p>
-                            Department Management
+                            Department
                             <i class="right fas fa-angle-left"></i>
                         </p>
                     </a>
@@ -82,7 +57,7 @@
                     <a href="#" class="nav-link {{ request()->routeIs('designations.*') ? 'active' : '' }}">
                         <i class="nav-icon fas fa-user-tie"></i>
                         <p>
-                            Designation Management
+                            Designation
                             <i class="right fas fa-angle-left"></i>
                         </p>
                     </a>
@@ -97,6 +72,31 @@
                             <a href="{{ route('designations.create') }}" class="nav-link {{ request()->routeIs('designations.create') ? 'active' : '' }}">
                                 <i class="far fa-circle nav-icon"></i>
                                 <p>Add Designation</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- Employee Management -->
+                <li class="nav-item {{ request()->routeIs('employees.*') ? 'menu-open' : '' }}">
+                    <a href="#" class="nav-link {{ request()->routeIs('employees.*') ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-users"></i>
+                        <p>
+                            Employee
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{{ route('employees.index') }}" class="nav-link {{ request()->routeIs('employees.index') ? 'active' : '' }}">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Employees</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('employees.create') }}" class="nav-link {{ request()->routeIs('employees.create') ? 'active' : '' }}">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Add Employee</p>
                             </a>
                         </li>
                     </ul>

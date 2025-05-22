@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\DesignationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -26,6 +27,9 @@ Route::middleware('auth')->group(function () {
 
     // Department Management Routes
     Route::resource('departments', DepartmentController::class);
+
+    // Designation Management Routes
+    Route::resource('designations', DesignationController::class);
 
     // API Routes for dynamic data
     Route::get('/api/departments/{department}/designations', function ($department) {
